@@ -38,13 +38,21 @@ code_ran = False
 code_ran_2 = False
 grapples = 3
 grapple_counter = Text(text=f'Grapples: {grapples}', origin=(-.5, .5), position=(-.89, .5), scale=1)
+speed_run_timer = Text(text=str('00:00.00'), y=.2, scale=1, position=(.76, .5))
+start_time = time.time()
 
 def update():
     global current_level
     global grapples
     global game_over 
     global hp
+    global start_time
     player.hp = 5
+    elapsed_time = time.time() - start_time
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
+    milliseconds = int((elapsed_time - int(elapsed_time)) * 100)
+    speed_run_timer.text = f'{minutes:02}:{seconds:02}.{milliseconds:02}'
     if player.y > 5 and game_over == False:
         camera.y += 0.04
     if grapples == 0:
@@ -60,21 +68,24 @@ def update():
             quit()
         global code_ran
         if not code_ran:
+            Text(text=f"Time: "+str(speed_run_timer.text), position=(-.3, 0), scale=2)
             Text(text=f"GAME OVER!", color=color.red, position=(-.3, .15), scale=3)
             Text(text=f"Press F5 to try again.", position=(-.3, -.25), scale=2) 
             Text(text=f"Right click to quit.", position=(-.3, -.19), scale=2) 
             Text(text=f"You got to level: "+str(current_level), position=(-.3, .30), scale=2)
+            speed_run_timer.disable()
             mixer.init()
             mixer.Sound("Python\\Grapplax\\Game over.mp3").play()
             code_ran = True 
     #TODO: implement {GAMEOVER > Fall off the screen} or clamp(pygame)
     if current_level == 1 and player.y > 75:
-        scene.disable()
         camera.y = 0
+        player.position = (0,0)
         global code_ran_2
         if not code_ran_2:
+            scene.clear()
             mixer.init()
-            mixer.Sound("Python\\Grapplax\\Game over.mp3").play()
+            mixer.Sound("Python\\Grapplax\\LevelWin.mp3").play()
             code_ran_2 = True
         current_level = 2
         levels()
@@ -175,6 +186,38 @@ class EleKill(Entity):
         self.blink(color.white, 0.1)
         mixer.init()
         mixer.Sound("Python\\Grapplax\\Spark.mp3").play()               
+
+code_ran_3 = False
+
+class DoomSlay(Entity):
+    def __init__(self, position=(0,0), power=(0)):
+        super().__init__(parent=scene, model="quad", scale=(power*1.5), texture=load_texture("DoomSlay.png"), collider="box", position=position)
+        self.power = power
+        self.speed = 0.1
+        self.direction = random.uniform(-1, 1)
+        
+    def update(self):
+        if Platform.intersects(self):
+            self.direction *= -1
+        if self.x >= 17:
+            self.direction = -1
+        elif self.x <= -17:
+            self.direction = 1  
+        r = random.uniform(0 ,10)
+        if r == 6:
+            self.direction *= random.choice(-1, 1)
+        self.x += self.speed * self.direction     
+        if player.intersects(self):
+            global hp
+            player.hp -= self.power * 0.5
+            global code_ran_3
+            if not code_ran_3:
+                x = random.uniform(-.89, .89)
+                y = random.uniform(-.5, .5)
+                scale = random.uniform(0, 4)
+                coords = (x, y)
+                Text(text=f"-{self.power}", color=color.red, position=coords, scale=scale)
+                code_ran_3 = True
             
 class levels:
     if current_level == 1:
